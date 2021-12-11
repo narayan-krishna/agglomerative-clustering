@@ -1,0 +1,13 @@
+agglomerative clustering notes
+
+start with collection C of n singleton clusters
+    -n clusters containing single data point
+
+repeat until X clusters left
+    -find pair of clusters that closest
+    -merge clusters into new cluster
+    -remove original cluster, add new cluster
+
+steps:
+compute a distance matrix
+
