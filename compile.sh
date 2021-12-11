@@ -1,2 +1,2 @@
 mpiCC hac.cpp
-time mpirun -n 3 ./a.out
+time mpirun -n 1 ./a.out
