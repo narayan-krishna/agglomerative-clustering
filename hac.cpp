@@ -9,6 +9,14 @@
 
 using namespace std;
 
+//run mpi while checking errors, take an error message
+void check_error(int status, const string message="MPI error") {
+  if ( status != 0 ) {    
+    cerr << "Error: " << message << endl;
+    exit(1);
+  }
+}
+
 //read string from file into a vector -> translate chars to ints
 void read_csv_coords(vector<float> &x, vector<float> &y, const string &path){
     ifstream input_stream (path);
@@ -42,18 +50,15 @@ void print_vector(const vector<T> &vec) {
   }
 }
 
-//run mpi while checking errors, take an error message
-void check_error(int status, const string message="MPI error") {
-  if ( status != 0 ) {    
-    cerr << "Error: " << message << endl;
-    exit(1);
-  }
-}
-
 inline void get_2d_coords(const int &index, const int &rows, 
                    int &x_coord, int &y_coord) {
   x_coord = (index % rows);
   y_coord = (index / rows); 
+}
+
+inline void average_points(vector<float> &x, vector<float> &y, int a, int b) {
+  x[a] = (x[a] + x[b]) / 2.0;
+  y[a] = (y[a] + y[b]) / 2.0;
 }
 
 template <class T>
@@ -75,7 +80,8 @@ vector<T> flatten_2d(const vector<vector<T>> &vec_2d) {
 }
 
 void compute_distance_matrix (const int &points, const vector<float> &x, 
-                              const vector<float> &y, vector<float> &distance_matrix) {
+                              const vector<float> &y, 
+                              vector<float> &distance_matrix) {
   int distance_matrix_loc = 0;
   for(int q = 0; q < points; q ++) {
     for(int k = 0; k < points; k ++) {
@@ -90,7 +96,8 @@ void compute_distance_matrix (const int &points, const vector<float> &x,
   } 
 }
 
-void visualize_distance_matrix (const vector<float> &distance_matrix, const int &points) {
+void visualize_distance_matrix (const vector<float> &distance_matrix, 
+                                const int &points) {
   for(int i = 0; i < points; i ++) {
     for(int j = 0; j < points; j ++) {
       cout << distance_matrix[(i*(points))+j] << " ";
@@ -99,9 +106,19 @@ void visualize_distance_matrix (const vector<float> &distance_matrix, const int 
   }
 }
 
-void min_distance_cluster(const vector<float> &distance_matrix, const int &points) {
-  int cluster1, cluster2;
-  
+void visualize_clusters (const vector<vector<int>> &clusters) {
+  for(auto i : clusters) {
+    cout << "<";
+    for(auto j : i) {
+      cout << j << " ";
+    }
+    cout << ">" << endl;
+  }
+}
+
+void compute_min_distance_between_clusters(int &cluster1, int &cluster2,
+                                           const vector<float> &distance_matrix, 
+                                           const int &points) {
   float min_distance = -1;
   for(int i = 0; i < pow(points, 2); i ++) {
     float curr_distance = distance_matrix[i];
@@ -115,12 +132,11 @@ void min_distance_cluster(const vector<float> &distance_matrix, const int &point
     }
   }
 
+
   cout << cluster1 << ", " << cluster2 << " (" << min_distance << ")" << endl;
 }
 
-void update_matrix () {
-
-}
+void update_dist_matrix () {}
 
 int main (int argc, char *argv[]) {
   //initialize ranks and amount of processes 
@@ -144,14 +160,55 @@ int main (int argc, char *argv[]) {
   if(rank == 0) {
     //read csv
     read_csv_coords(x, y, "input.csv");
+    //i have a bunch of points ...
+      //vector of x coords
+      //vector of y coords
+      //vector of vectors of point nums as clusters
     int points = x.size();
-    vector<float> distance_matrix(pow(points, 2));
-    compute_distance_matrix(points, x, y, distance_matrix);
-    min_distance_cluster(distance_matrix, points);
+    clusters.resize(points);
 
-    // print_vector(distance_matrix); cout << endl;
+    for(int i = 0; i < points; i ++) {
+      clusters[i].push_back(i);
+    }
+
+    vector<float> distance_matrix(pow(points, 2));
+
+    //i compute the distance matrix...
+    compute_distance_matrix(points, x, y, distance_matrix);
+
     cout << " ---------------- " << endl;
     visualize_distance_matrix(distance_matrix, points);
+    cout << " ---------------- " << endl;
+
+    int cluster1, cluster2;
+    //i find the minimum distance... 
+    compute_min_distance_between_clusters(cluster1, cluster2, distance_matrix, points);
+    //i add whatever is in the index of the second cluster to whatever is in the first cluster
+    //i remove the 4 coordinates from the x,y vector and add back the average of the points
+
+    print_vector(x); cout << endl;
+    print_vector(y); cout << endl;
+    cout << " ---------------- " << endl;
+
+    average_points(x, y, cluster1, cluster2);
+    x.erase(x.begin() + cluster2);
+    y.erase(y.begin() + cluster2);
+
+    print_vector(x); cout << endl;
+    print_vector(y); cout << endl;
+
+    cout << " ---------------- " << endl;
+
+    visualize_clusters(clusters);
+
+    cout << " ---------------- " << endl;
+    //repeat...
+
+    //after computing the min distance cluster, i...
+    //add cluster 2 to wherever cluster 1 is...
+    //i remove cluster 2, i average points as i go on...
+    
+    // print_vector(distance_matrix); cout << endl;
   }
 
   //not completely parallel
@@ -181,8 +238,8 @@ int main (int argc, char *argv[]) {
 
   //print results from rank 0
   if (rank == 0) {
-    print_vector(x); cout << endl;
-    print_vector(y); cout << endl;
+    // print_vector(x); cout << endl;
+    // print_vector(y); cout << endl;
   }
 
   //finalize and quit mpi, ending processes
