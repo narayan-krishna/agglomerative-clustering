@@ -17,6 +17,15 @@ void check_error(int status, const string message="MPI error") {
   }
 }
 
+void check_input_count(const int &argc) {
+  if ( argc != 2 ) {    
+    cerr << "Error: requires desired cluster count -> "; 
+    cerr << "./a.out <CLUSTER COUNT>" << endl;
+    exit(1);
+  }
+}
+
+
 //read string from file into a vector -> translate chars to ints
 void read_csv_coords(vector<float> &x, vector<float> &y, const string &path){
     ifstream input_stream (path);
@@ -158,12 +167,15 @@ int main (int argc, char *argv[]) {
   check_error(MPI_Comm_rank(MPI_COMM_WORLD, &rank), "unable to obtain rank");
   cout << "Starting process " << rank << "/" << "p\n";
 
+  check_input_count(argc);
+
   //info necessary to perform task on separate processes
   int points;
   vector<float> x;
   vector<float> y;
   vector<vector<int>> clusters;
-  int expected_cluster_count = 1;
+  // int expected_cluster_count = atoi(argv[2]);
+  int expected_cluster_count = 2;
 
   //have main keep track of clusters?
 
@@ -175,6 +187,7 @@ int main (int argc, char *argv[]) {
       //vector of y coords
       //vector of vectors of point nums as clusters
     int points = x.size();
+    int starting_points = points;
     clusters.resize(points);
 
     for(int i = 0; i < points; i ++) {
@@ -183,9 +196,8 @@ int main (int argc, char *argv[]) {
     vector<float> distance_matrix(pow(points, 2));
 
     //i compute the distance matrix...
-    for (int i = 0; i < points - expected_cluster_count; i ++) {
-      //distance matrix size would change...
-      // vector<float> distance_matrix(pow(points, 2));
+    for (int i = 0; i < starting_points - expected_cluster_count; i ++) {
+
       compute_distance_matrix(points, x, y, distance_matrix);
 
       cout << " ----distance---- " << endl;
@@ -220,44 +232,9 @@ int main (int argc, char *argv[]) {
       
       points = x.size();
       cout << "new point count: " << points << endl;
-      // distance_matrix.clear();
     }
-      
-    //repeat...
-
-    //after computing the min distance cluster, i...
-    //add cluster 2 to wherever cluster 1 is...
-    //i remove cluster 2, i average points as i go on...
-    
-    // print_vector(distance_matrix); cout << endl;
   }
 
-  //not completely parallel
-  //read points -- rank 0
-  //calculate distance matrix -- split over processes, gather
-  //get minimum distance cluster k -- split over grid, gather, calculate min on that
-    //add this cluster to rank 0
-  //update points -- split over processes, gather
-  //
-
-  //compute distance matrix
-
-  //broadcast cut_size so that processes can resize to hold enough data
-  //check_error(MPI_Bcast(&cut_size, 1, MPI_INT, 0, MPI_COMM_WORLD));  
-  //cut.resize(cut_size);
-
-  //scatter input string
-  //check_error(MPI_Scatter(&sequence[0], cut_size, MPI_CHAR, &cut[0], cut_size, 
-                           //MPI_CHAR, 0, MPI_COMM_WORLD));  
-
-  //count cut sequences and add to each result array
-  //count_sequence(results, cut);
-
-  //sum results using mpi reduce to an array final results
-  //check_error(MPI_Reduce(&results[0], &final_results[0], 4, MPI_INT, MPI_SUM, 
-              //0, MPI_COMM_WORLD));
-
-  //print results from rank 0
   if (rank == 0) {
     // print_vector(x); cout << endl;
     // print_vector(y); cout << endl;
