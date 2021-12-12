@@ -108,12 +108,13 @@ void visualize_distance_matrix (const vector<float> &distance_matrix,
 
 void visualize_clusters (const vector<vector<int>> &clusters) {
   for(auto i : clusters) {
-    cout << "<";
+    cout << "< ";
     for(auto j : i) {
-      cout << j << " ";
+      cout << j + 1 << " ";
     }
-    cout << ">" << endl;
+    cout << "> ";
   }
+  cout << endl;
 }
 
 void compute_min_distance_between_clusters(int &cluster1, int &cluster2,
@@ -122,7 +123,7 @@ void compute_min_distance_between_clusters(int &cluster1, int &cluster2,
   float min_distance = -1;
   for(int i = 0; i < pow(points, 2); i ++) {
     float curr_distance = distance_matrix[i];
-    cout << curr_distance << endl;
+    // cout << curr_distance << endl;
     if (curr_distance != 0) {
       if (min_distance == -1 || 
          (min_distance != -1 && curr_distance < min_distance)) {
@@ -131,9 +132,17 @@ void compute_min_distance_between_clusters(int &cluster1, int &cluster2,
       }
     }
   }
-
-
   cout << cluster1 << ", " << cluster2 << " (" << min_distance << ")" << endl;
+}
+
+inline void update_clusters(const int &cluster1, const int &cluster2, 
+                     vector<vector<int>> &clusters) {
+  //what does update clusters do? add cluster 2 to cluster 1, get rid of cluster 2
+  for(int i : clusters[cluster2]) {
+    cout << i << endl;
+    clusters[cluster1].push_back(i);
+  }
+  clusters.erase(clusters.begin() + cluster2);
 }
 
 void update_dist_matrix () {}
@@ -154,6 +163,7 @@ int main (int argc, char *argv[]) {
   vector<float> x;
   vector<float> y;
   vector<vector<int>> clusters;
+  int expected_cluster_count = 1;
 
   //have main keep track of clusters?
 
@@ -170,38 +180,49 @@ int main (int argc, char *argv[]) {
     for(int i = 0; i < points; i ++) {
       clusters[i].push_back(i);
     }
-
     vector<float> distance_matrix(pow(points, 2));
 
     //i compute the distance matrix...
-    compute_distance_matrix(points, x, y, distance_matrix);
+    for (int i = 0; i < points - expected_cluster_count; i ++) {
+      //distance matrix size would change...
+      // vector<float> distance_matrix(pow(points, 2));
+      compute_distance_matrix(points, x, y, distance_matrix);
 
-    cout << " ---------------- " << endl;
-    visualize_distance_matrix(distance_matrix, points);
-    cout << " ---------------- " << endl;
+      cout << " ----distance---- " << endl;
+      visualize_distance_matrix(distance_matrix, points);
+      cout << " ----points 2---- " << endl;
 
-    int cluster1, cluster2;
-    //i find the minimum distance... 
-    compute_min_distance_between_clusters(cluster1, cluster2, distance_matrix, points);
-    //i add whatever is in the index of the second cluster to whatever is in the first cluster
-    //i remove the 4 coordinates from the x,y vector and add back the average of the points
+      int cluster1, cluster2;
+      //i find the minimum distance... 
+      compute_min_distance_between_clusters(cluster1, cluster2, distance_matrix, points);
+      //i add whatever is in the index of the second cluster to whatever is in the first cluster
+      //i remove the 4 coordinates from the x,y vector and add back the average of the points
 
-    print_vector(x); cout << endl;
-    print_vector(y); cout << endl;
-    cout << " ---------------- " << endl;
+      print_vector(x); cout << endl;
+      print_vector(y); cout << endl;
+      cout << " ----points 2---- " << endl;
 
-    average_points(x, y, cluster1, cluster2);
-    x.erase(x.begin() + cluster2);
-    y.erase(y.begin() + cluster2);
+      average_points(x, y, cluster1, cluster2);
+      x.erase(x.begin() + cluster2);
+      y.erase(y.begin() + cluster2);
 
-    print_vector(x); cout << endl;
-    print_vector(y); cout << endl;
+      print_vector(x); cout << endl;
+      print_vector(y); cout << endl;
 
-    cout << " ---------------- " << endl;
+      cout << " ----clusters---- " << endl;
 
-    visualize_clusters(clusters);
+      visualize_clusters(clusters);
+      update_clusters(cluster1, cluster2, clusters);
+      cout << "adding from " << cluster2 << " to " << cluster1 << endl;
+      visualize_clusters(clusters);
 
-    cout << " ---------------- " << endl;
+      cout << " ----updates---- " << endl;
+      
+      points = x.size();
+      cout << "new point count: " << points << endl;
+      // distance_matrix.clear();
+    }
+      
     //repeat...
 
     //after computing the min distance cluster, i...
