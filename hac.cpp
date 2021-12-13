@@ -23,7 +23,7 @@ void acquire_partition_rows(vector<int> &partition_rows,
   //if more processes than points
   if(processes >= points) {
     cout << "yes" << endl;
-    if (rank >= points) {
+    if (rank >= points || rank == 0) {
       partition_rows.push_back(-1);    
     } else {
       cout << rank << "!!!" << endl;
@@ -39,7 +39,7 @@ void acquire_partition_rows(vector<int> &partition_rows,
     if (i % 2 == 0) {
       partition_rows.push_back(rank + i);
     } else {
-      partition_rows.push_back(points - rank - i - 1);
+      partition_rows.push_back(points - rank - i);
     }
   }
 }
@@ -187,40 +187,63 @@ void compute_distance_matrix (const int points,
 void compute_min_distance_between_clusters(vector<float> &min_cluster,
                                            const vector<int> &partition_rows,
                                            const vector<float> &distance_matrix, 
-                                           const int points) {
+                                           const int points, const int rank) {
   float min_distance = -1; 
   int cluster1, cluster2;
+  bool marker = false;
+
+  sleep(rank);
+  visualize_distance_matrix(distance_matrix, points);
+  print_vector(partition_rows); cout << endl;
 
   for (int i : partition_rows) {
     for (int j = 0; j < i; j ++) {
-      float curr_distance = distance_matrix[(i*points) + j];
-      if (curr_distance != 0) {
-        if (min_distance == -1 || 
-          (min_distance != -1 && curr_distance < min_distance)) {
-          cluster1 = i; 
-          cluster2 = j;
-          min_distance = curr_distance;
+
+      if (i > 0 && i < points) {
+        float curr_distance = distance_matrix[(i*points) + j];
+        cout << curr_distance << endl;
+
+        if (curr_distance != 0) {
+          marker = true;
+          if (min_distance == -1 || 
+            (min_distance != -1 && curr_distance < min_distance)) {
+            cluster1 = i; 
+            cluster2 = j;
+            min_distance = curr_distance;
+          }
         }
       }
     }
   }
 
-  min_cluster[0] = min_distance;
-  min_cluster[1] = cluster1;
-  min_cluster[2] = cluster2;
-
+  if(marker) {
+    min_cluster[0] = min_distance;
+    min_cluster[1] = cluster1;
+    min_cluster[2] = cluster2;
+  }
 }
 
-void extract_champion_minimum(vector<float> &cluster_candidates) {
+bool out_of_bounds(int x_coord, int y_coord, int points) {
+  // if (x_coord >= points - 1) {
+  //   return true;
+  // }
+  return false;
+}
+
+void extract_champion_minimum(vector<float> &cluster_candidates, int points) {
   int size = cluster_candidates.size();
   int current_min_index = -1;
   for(int i = 0; i < size; i += 3) {
-    if (cluster_candidates[i] > 0) {
-      if (current_min_index == -1) {
-        current_min_index = i;
-      } else {
-        if (cluster_candidates[current_min_index] > cluster_candidates[i]) {
+
+    if (!out_of_bounds(cluster_candidates[i + 1], 
+                       cluster_candidates[i + 2], points)) {
+      if (cluster_candidates[i] > 0) {
+        if (current_min_index == -1) {
           current_min_index = i;
+        } else {
+          if (cluster_candidates[current_min_index] > cluster_candidates[i]) {
+            current_min_index = i;
+          }
         }
       }
     }
@@ -283,7 +306,7 @@ int main (int argc, char *argv[]) {
   }
 
   // for (int i = 0; i < starting_points - expected_cluster_count; i ++) {
-  for (int i = 0; i < 3; i ++) {
+  for (int i = 0; i < 2; i ++) {
 
     if(rank == 0) {
       points = x.size();
@@ -322,14 +345,16 @@ int main (int argc, char *argv[]) {
       compute_distance_matrix(points, partition_rows, x, y, distance_matrix);
     }
 
-    // sleep(rank);
-    // cout << "--------------" << rank << endl;
-    // visualize_distance_matrix(distance_matrix, points);
-    // cout << "--------------" << endl;
+    // if (i == 1) {
+    //   sleep(rank);
+    //   cout << "--------------" << rank << endl;
+    //   visualize_distance_matrix(distance_matrix, points);
+    //   cout << "--------------" << endl;
+    // }
 
     if(partition_rows[0] != -1) {
       compute_min_distance_between_clusters(min_cluster, partition_rows, 
-                                            distance_matrix, points);
+                                            distance_matrix, points, rank);
     } 
 
     check_error(MPI_Barrier(MPI_COMM_WORLD));
@@ -347,7 +372,7 @@ int main (int argc, char *argv[]) {
 
     if (rank == 0) {
       print_vector(cluster_candidates); cout << endl;
-      extract_champion_minimum(cluster_candidates); 
+      extract_champion_minimum(cluster_candidates, points); 
       print_vector(cluster_candidates); cout << endl;
 
       average_points(x, y, cluster_candidates[0], cluster_candidates[1]);
