@@ -306,7 +306,7 @@ int main (int argc, char *argv[]) {
   }
 
   // for (int i = 0; i < starting_points - expected_cluster_count; i ++) {
-  for (int i = 0; i < 2; i ++) {
+  for (int i = 0; i < 4; i ++) {
 
     if(rank == 0) {
       points = x.size();
@@ -376,8 +376,8 @@ int main (int argc, char *argv[]) {
       print_vector(cluster_candidates); cout << endl;
 
       average_points(x, y, cluster_candidates[0], cluster_candidates[1]);
-      x.erase(x.begin() + cluster_candidates[0]);
-      y.erase(y.begin() + cluster_candidates[0]);
+      x.erase(x.begin() + cluster_candidates[1]);
+      y.erase(y.begin() + cluster_candidates[1]);
 
       update_clusters(cluster_candidates[0], cluster_candidates[1], clusters);
 
@@ -398,91 +398,6 @@ int main (int argc, char *argv[]) {
     distance_matrix.clear();
     cluster_candidates.clear();
     min_cluster.clear();
-  }
-
-  //compute mins in individual processes, gather into array of p size
-
-  // -----------------------------------------------------------
-    //i compute the distance matrix...
-  // if(rank == 0) {
-  //   for (int i = 0; i < starting_points - expected_cluster_count; i ++) {
-  //     //distance matrix size would change...
-  //     // vector<float> distance_matrix(pow(points, 2));
-  //     compute_distance_matrix(points, x, y, distance_matrix, 1);
-
-  //     cout << " ----distance---- " << endl;
-  //     visualize_distance_matrix(distance_matrix, points);
-  //     cout << " ----points 2---- " << endl;
-
-  //     int cluster1, cluster2;
-  //     //i find the minimum distance... 
-  //     compute_min_distance_between_clusters(cluster1, cluster2, distance_matrix, points);
-  //     //i add whatever is in the index of the second cluster to whatever is in the first cluster
-  //     //i remove the 4 coordinates from the x,y vector and add back the average of the points
-
-  //     print_vector(x); cout << endl;
-  //     print_vector(y); cout << endl;
-  //     cout << " ----points 2---- " << endl;
-
-  //     average_points(x, y, cluster1, cluster2);
-  //     x.erase(x.begin() + cluster2);
-  //     y.erase(y.begin() + cluster2);
-
-  //     print_vector(x); cout << endl;
-  //     print_vector(y); cout << endl;
-
-  //     cout << " ----clusters---- " << endl;
-
-  //     visualize_clusters(clusters);
-  //     update_clusters(cluster1, cluster2, clusters);
-  //     cout << "adding from " << cluster2 << " to " << cluster1 << endl;
-  //     visualize_clusters(clusters);
-
-  //     cout << " ----updates---- " << endl;
-      
-  //     points = x.size();
-  //     cout << "new point count: " << points << endl;
-  //     // distance_matrix.clear();
-  //   }
-      
-    // repeat...
-
-    // after computing the min distance cluster, i...
-    // add cluster 2 to wherever cluster 1 is...
-    // i remove cluster 2, i average points as i go on...
-    
-    // print_vector(distance_matrix); cout << endl;
-  // }
-
-  //not completely parallel
-  //read points -- rank 0
-  //calculate distance matrix -- split over processes, gather
-  //get minimum distance cluster k -- split over grid, gather, calculate min on that
-    //add this cluster to rank 0
-  //update points -- split over processes, gather
-  //
-
-  //compute distance matrix
-
-  //broadcast cut_size so that processes can resize to hold enough data
-  //check_error(MPI_Bcast(&cut_size, 1, MPI_INT, 0, MPI_COMM_WORLD));  
-  //cut.resize(cut_size);
-
-  //scatter input string
-  //check_error(MPI_Scatter(&sequence[0], cut_size, MPI_CHAR, &cut[0], cut_size, 
-                           //MPI_CHAR, 0, MPI_COMM_WORLD));  
-
-  //count cut sequences and add to each result array
-  //count_sequence(results, cut);
-
-  //sum results using mpi reduce to an array final results
-  //check_error(MPI_Reduce(&results[0], &final_results[0], 4, MPI_INT, MPI_SUM, 
-              //0, MPI_COMM_WORLD));
-
-  //print results from rank 0
-  if (rank == 0) {
-    // print_vector(x); cout << endl;
-    // print_vector(y); cout << endl;
   }
 
   //finalize and quit mpi, ending processes
