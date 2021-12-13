@@ -1,3 +1,11 @@
+/**
+ * Hierarchical Agglomerative Clustering using MPI
+ * Final Project for CPSC445 (High Performance Computing)
+ * 
+ * Krishna Narayan
+ * December 13th, 2021
+ */
+
 #include <mpi.h>
 #include <iostream>
 #include <string>
@@ -8,6 +16,7 @@
 #include <cmath>
 
 using namespace std;
+
 
 /*run mpi while checking errors, take an error message*/
 void check_error(int status, const string message="MPI error") {
