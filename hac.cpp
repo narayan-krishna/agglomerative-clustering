@@ -9,7 +9,7 @@
 
 using namespace std;
 
-//run mpi while checking errors, take an error message
+/*run mpi while checking errors, take an error message*/
 void check_error(int status, const string message="MPI error") {
   if ( status != 0 ) {    
     cerr << "Error: " << message << endl;
@@ -17,6 +17,8 @@ void check_error(int status, const string message="MPI error") {
   }
 }
 
+/*assigns rows to process based on rank, and whether there are more processes
+then points*/
 void acquire_partition_rows(vector<int> &partition_rows,
                                    const int points, const int processes, 
                                    const int rank) {
@@ -44,16 +46,7 @@ void acquire_partition_rows(vector<int> &partition_rows,
   }
 }
 
-// inline void acquire_partition_size(int &partition_size, const int points, 
-//                                    const int processes, const int rank) {
-//     if (processes - 1 != rank) {
-//       partition_size = points / processes;
-//     } else {
-//       partition_size = (points / processes) + (points % processes);
-//     }
-// }
-
-//read string from file into a vector -> translate chars to ints
+/*read string from file into a vector -> translate chars to ints*/
 void read_csv_coords(vector<float> &x, vector<float> &y, const string &path){
     ifstream input_stream (path);
 
@@ -78,6 +71,7 @@ void read_csv_coords(vector<float> &x, vector<float> &y, const string &path){
     }
 }
 
+/*print a vector of type t, with an endline if signaled*/
 template <class T>
 inline void print_vector(const vector<T> &vec, const int signal) {
   for(auto i : vec) {
@@ -86,7 +80,7 @@ inline void print_vector(const vector<T> &vec, const int signal) {
   if (signal == 1) cout << endl;
 }
 
-//print a character vector
+/*print a vector of type t (no signal)*/
 template <class T>
 inline void print_vector(const vector<T> &vec) {
   for(auto i : vec) {
@@ -94,27 +88,34 @@ inline void print_vector(const vector<T> &vec) {
   }
 }
 
+/*for testing -- see what value a process holds in a given variable. takes a 
+  tag for readability*/
 template <class T>
 inline void process_has(int process, T data, string info) {
   cout << "process " << process << " has: " << data;
   cout << " " << info << endl;
 }
 
+/*for utility, get the 2d coordinates given an 1d index*/
 inline void get_2d_coords(const int index, const int rows, 
                    int &x_coord, int &y_coord) {
   x_coord = (index % rows);
   y_coord = (index / rows); 
 }
 
+/*for utility, get the 1d index given 2d coordinates*/
 inline int get_1d_coord(const int &x_coord, const int &y_coord, const int columns) {
   return (x_coord*columns)+y_coord;
 }
 
+/*with a vector of x coords and y coords and two pointers, get the avg of the 
+  points being pointed at. place avg coords into first pointer position*/
 inline void average_points(vector<float> &x, vector<float> &y, const int a, const int b) {
   x[a] = (x[a] + x[b]) / 2.0;
   y[a] = (y[a] + y[b]) / 2.0;
 }
 
+/*for utility, flatten a 2d vector into a 1d vector*/
 template <class T>
 vector<T> flatten_2d(const vector<vector<T>> &vec_2d) {
   int rows = vec_2d[0].size();
@@ -133,6 +134,8 @@ vector<T> flatten_2d(const vector<vector<T>> &vec_2d) {
   return flattened;
 }
 
+/*visualize 1d distance matrix as 2d (for testing) -- visualize only bottom
+  corner (distance matrix is mirrored)*/
 void visualize_distance_matrix (const vector<float> &distance_matrix, 
                                 const int points) {
   for(int i = 0; i < points; i ++) {
@@ -143,6 +146,8 @@ void visualize_distance_matrix (const vector<float> &distance_matrix,
   }
 }
 
+/*visualize 1d distance matrix as 2d (for testing) -- signal to visualize 
+  entire grid*/
 void visualize_distance_matrix (const vector<float> &distance_matrix, 
                                 const int points, const int signal) {
   for(int i = 0; i < points; i ++) {
@@ -153,6 +158,7 @@ void visualize_distance_matrix (const vector<float> &distance_matrix,
   }
 }
 
+/*visualize point clusters*/
 void visualize_clusters (const vector<vector<int>> &clusters) {
   for(auto i : clusters) {
     cout << "< ";
@@ -164,12 +170,13 @@ void visualize_clusters (const vector<vector<int>> &clusters) {
   cout << endl;
 }
 
+/*given a vector of rows, calculate distances at points in rows specified by
+  vector. processes as many points as row count (distance marix mirror)*/
 void compute_distance_matrix (const int points, 
                               const vector<int> &partition_rows, 
                               const vector<float> &x, const vector<float> &y, 
                               vector<float> &distance_matrix) {
   //iterate through the top row of matrix
-  cout <<  "-helfiaoew--" << endl;
   for (int i : partition_rows) {
     for (int q = 0; q < i; q++) {
         float x_diff = x[q] - x[i];
@@ -178,12 +185,9 @@ void compute_distance_matrix (const int points,
                                               (y_diff * y_diff));
     }
   }
-
-  // if(partition_row_1 == partition_row_2) return;
-
-  //iterate through the bottom row of matrix
 }
 
+/*find the minimum distance in distance matrix, within specified partition rows*/
 void compute_min_distance_between_clusters(vector<float> &min_cluster,
                                            const vector<int> &partition_rows,
                                            const vector<float> &distance_matrix, 
@@ -192,17 +196,11 @@ void compute_min_distance_between_clusters(vector<float> &min_cluster,
   int cluster1, cluster2;
   bool marker = false;
 
-  sleep(rank);
-  visualize_distance_matrix(distance_matrix, points);
-  print_vector(partition_rows); cout << endl;
-
   for (int i : partition_rows) {
     for (int j = 0; j < i; j ++) {
 
       if (i > 0 && i < points) {
         float curr_distance = distance_matrix[(i*points) + j];
-        cout << curr_distance << endl;
-
         if (curr_distance != 0) {
           marker = true;
           if (min_distance == -1 || 
@@ -223,27 +221,18 @@ void compute_min_distance_between_clusters(vector<float> &min_cluster,
   }
 }
 
-bool out_of_bounds(int x_coord, int y_coord, int points) {
-  // if (x_coord >= points - 1) {
-  //   return true;
-  // }
-  return false;
-}
-
+/*all processes return a minimum. the overall minimum (champion) is then found
+  by rank 0 in this function*/
 void extract_champion_minimum(vector<float> &cluster_candidates, int points) {
   int size = cluster_candidates.size();
   int current_min_index = -1;
   for(int i = 0; i < size; i += 3) {
-
-    if (!out_of_bounds(cluster_candidates[i + 1], 
-                       cluster_candidates[i + 2], points)) {
-      if (cluster_candidates[i] > 0) {
-        if (current_min_index == -1) {
+    if (cluster_candidates[i] > 0) {
+      if (current_min_index == -1) {
+        current_min_index = i;
+      } else {
+        if (cluster_candidates[current_min_index] > cluster_candidates[i]) {
           current_min_index = i;
-        } else {
-          if (cluster_candidates[current_min_index] > cluster_candidates[i]) {
-            current_min_index = i;
-          }
         }
       }
     }
@@ -254,19 +243,16 @@ void extract_champion_minimum(vector<float> &cluster_candidates, int points) {
   cluster_candidates.resize(2);
 }
 
+/*update clusters based on points. (cluster 1 and cluster 2 are merged into
+  cluster1, and cluster2 is erased)*/
 inline void update_clusters(const int &cluster1, const int &cluster2, 
                             vector<vector<int>> &clusters) {
-  //what does update clusters do? add cluster 2 to cluster 1, get rid of cluster 2
   for(int i : clusters[cluster2]) {
     cout << i << endl;
     clusters[cluster1].push_back(i);
   }
   clusters.erase(clusters.begin() + cluster2);
 }
-
-
-
-// void update_dist_matrix () {}
 
 int main (int argc, char *argv[]) {
   //initialize ranks and amount of processes 
@@ -291,8 +277,8 @@ int main (int argc, char *argv[]) {
   vector<float> min_cluster;
   int expected_cluster_count = 4;
 
-  //have main keep track of clusters?
 
+  /*rank 0 has things to do intitally, and then in the clustering loop*/
   if(rank == 0) {
     //read csv
     read_csv_coords(x, y, "input.csv");
@@ -305,8 +291,7 @@ int main (int argc, char *argv[]) {
     visualize_clusters(clusters);
   }
 
-  // for (int i = 0; i < starting_points - expected_cluster_count; i ++) {
-  for (int i = 0; i < 4; i ++) {
+  for (int i = 0; i < 5; i ++) {
 
     if(rank == 0) {
       points = x.size();
@@ -337,10 +322,6 @@ int main (int argc, char *argv[]) {
 
     acquire_partition_rows(partition_rows, points, p, rank);
 
-    // // // x
-    // // // x x
-    // // // x x x
-
     if(partition_rows[0] != -1) {
       compute_distance_matrix(points, partition_rows, x, y, distance_matrix);
     }
@@ -358,11 +339,6 @@ int main (int argc, char *argv[]) {
     } 
 
     check_error(MPI_Barrier(MPI_COMM_WORLD));
-
-    // sleep(rank);
-    // cout << "rank" << rank << " clusters" << endl;
-    // cout << min_cluster[0] << ", " << min_cluster[1];
-    // cout << "--------------" << endl;
 
     check_error(MPI_Gather(&min_cluster[0], 3, MPI_FLOAT, &cluster_candidates[0],
                 3, MPI_FLOAT, 0, MPI_COMM_WORLD));
@@ -384,11 +360,6 @@ int main (int argc, char *argv[]) {
       // sleep(1);
 
       visualize_clusters(clusters);
-
-      // cout << "zero x vector: " << endl;
-      // print_vector(x, 1); 
-      // cout << "zero y vector: " << endl;
-      // print_vector(y, 1); 
     }
 
     if(rank != 0) {
@@ -398,6 +369,8 @@ int main (int argc, char *argv[]) {
     distance_matrix.clear();
     cluster_candidates.clear();
     min_cluster.clear();
+
+    check_error(MPI_Barrier(MPI_COMM_WORLD));
   }
 
   //finalize and quit mpi, ending processes
