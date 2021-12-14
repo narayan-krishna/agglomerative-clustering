@@ -2,7 +2,7 @@
  * Hierarchical Agglomerative Clustering using MPI
  * Final Project for CPSC445 (High Performance Computing)
  * 
- * Krishna Narayan
+ * Krishna Narayan 
  * December 13th, 2021
  */
 
@@ -26,6 +26,8 @@ void check_error(int status, const string message="MPI error") {
   }
 }
 
+/*assigns rows to process based on rank, and whether there are more processes
+then points*/
 void acquire_partition_rows(vector<int> &partition_rows,
                                    const int points, const int processes, 
                                    const int rank) {
@@ -76,7 +78,7 @@ void read_csv_coords(vector<float> &x, vector<float> &y, const string &path){
     }
 }
 
-/*print a vector of type t, with an endline if signaled*/
+/*print a vector  of type t, with an endline if signaled*/
 template <class T>
 inline void print_vector(const vector<T> &vec, const int signal) {
   for(auto i : vec) {
@@ -253,7 +255,7 @@ void extract_champion_minimum(vector<float> &cluster_candidates, int points) {
 inline void update_clusters(const int &cluster1, const int &cluster2, 
                             vector<vector<int>> &clusters) {
   for(int i : clusters[cluster2]) {
-    cout << i << endl;
+    // cout << i << endl;
     clusters[cluster1].push_back(i);
   }
   clusters.erase(clusters.begin() + cluster2);
@@ -296,15 +298,19 @@ int main (int argc, char *argv[]) {
     visualize_clusters(clusters);
   }
 
+  /*start clustering loop*/
   for (int i = 0; i < 5; i ++) {
 
     if(rank == 0) {
-      points = x.size();
-      cluster_candidates.resize(3*p);
+      points = x.size(); //acquire points
+      cluster_candidates.resize(3*p); //resize cluster candidate vector
+      if (clusters.size() == 1) {
+        cerr << "only one cluster left..." << endl;
+        exit(1);
+      }
     }
 
-    if (rank == 0) cout << "here" << endl;
-
+    /*broadcast point count*/
     check_error(MPI_Bcast(&points, 1, MPI_INT, 0, MPI_COMM_WORLD));  
 
     if(rank != 0) {
@@ -312,73 +318,60 @@ int main (int argc, char *argv[]) {
       y.resize(points);
     }
 
+    /*broadcast point information*/
     check_error(MPI_Bcast(&x[0], points, MPI_INT, 0, MPI_COMM_WORLD));  
     check_error(MPI_Bcast(&y[0], points, MPI_INT, 0, MPI_COMM_WORLD));  
-
-    if(rank == 1) {
-      cout << "non zero x vector: " << endl;
-      print_vector(x, 1); 
-      cout << "non zero y vector: " << endl;
-      print_vector(y, 1); 
-    }
 
     distance_matrix.resize(pow(points, 2));
     min_cluster.resize(3, 0);
 
     acquire_partition_rows(partition_rows, points, p, rank);
 
+    /*compute distance matrix for partition (if assigned)*/
     if(partition_rows[0] != -1) {
       compute_distance_matrix(points, partition_rows, x, y, distance_matrix);
     }
 
-    // if (i == 1) {
-    //   sleep(rank);
-    //   cout << "--------------" << rank << endl;
-    //   visualize_distance_matrix(distance_matrix, points);
-    //   cout << "--------------" << endl;
-    // }
-
+    /*compute distance min distance for partition (if assigned)*/
     if(partition_rows[0] != -1) {
       compute_min_distance_between_clusters(min_cluster, partition_rows, 
                                             distance_matrix, points, rank);
     } 
 
+    /*ensure all processes have finished calculations*/
     check_error(MPI_Barrier(MPI_COMM_WORLD));
 
+    /*gather candidates together*/
     check_error(MPI_Gather(&min_cluster[0], 3, MPI_FLOAT, &cluster_candidates[0],
                 3, MPI_FLOAT, 0, MPI_COMM_WORLD));
 
-    check_error(MPI_Barrier(MPI_COMM_WORLD));
-    // // sleep(2);
-
     if (rank == 0) {
-      print_vector(cluster_candidates); cout << endl;
+      /*find the minimum among candidate mins*/
       extract_champion_minimum(cluster_candidates, points); 
-      print_vector(cluster_candidates); cout << endl;
 
+      /*rearrange clusters, coordinates*/
       average_points(x, y, cluster_candidates[0], cluster_candidates[1]);
       x.erase(x.begin() + cluster_candidates[1]);
       y.erase(y.begin() + cluster_candidates[1]);
 
       update_clusters(cluster_candidates[0], cluster_candidates[1], clusters);
 
-      // sleep(1);
-
+      cout << "cluster iteration " << i + 1 << ": " << endl; 
       visualize_clusters(clusters);
     }
 
     if(rank != 0) {
       x.clear();
+      y.clear();
     }
 
+    /*reset for next iteration*/
     distance_matrix.clear();
     cluster_candidates.clear();
     min_cluster.clear();
-
-    check_error(MPI_Barrier(MPI_COMM_WORLD));
   }
 
-  //finalize and quit mpi, ending processes
+  /*finalize and quit mpi, ending processes*/
   check_error(MPI_Finalize());
   cout << "Ending process " << rank << "/" << "p\n";
 
