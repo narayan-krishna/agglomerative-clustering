@@ -288,7 +288,7 @@ int main (int argc, char *argv[]) {
   /*rank 0 has things to do intitally, and then in the clustering loop*/
   if(rank == 0) {
     //read csv
-    read_csv_coords(x, y, "input.csv");
+    read_csv_coords(x, y, "../input_files/input.csv");
     starting_points = x.size();
     clusters.resize(starting_points);
 

@@ -25,7 +25,6 @@ void check_input_count(const int &argc) {
   }
 }
 
-
 //read string from file into a vector -> translate chars to ints
 void read_csv_coords(vector<float> &x, vector<float> &y, const string &path){
     ifstream input_stream (path);
